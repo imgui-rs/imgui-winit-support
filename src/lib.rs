@@ -73,21 +73,21 @@
 //! }).expect("EventLoop error");
 //! ```
 
-use imgui::{self, BackendFlags, ConfigFlags, Context, Io, Key, Ui};
+use imgui::{BackendFlags, ConfigFlags, Io, Key, MouseButton, MouseCursor};
 use std::cmp::Ordering;
 
 // Re-export winit to make it easier for users to use the correct version.
 pub use winit;
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
+    error::ExternalError,
+    event::{
+        ElementState, Event, MouseButton as WinitMouseButton, MouseScrollDelta, TouchPhase,
+        WindowEvent,
+    },
     keyboard::{Key as WinitKey, KeyLocation, NamedKey},
     platform::modifier_supplement::KeyEventExtModifierSupplement,
-};
-
-use winit::{
-    error::ExternalError,
-    event::{ElementState, Event, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent},
-    window::{CursorIcon as MouseCursor, Window},
+    window::{CursorIcon, Window},
 };
 
 /// winit backend platform state
@@ -100,21 +100,21 @@ pub struct WinitPlatform {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 struct CursorSettings {
-    cursor: Option<imgui::MouseCursor>,
+    cursor: Option<MouseCursor>,
     draw_cursor: bool,
 }
 
-fn to_winit_cursor(cursor: imgui::MouseCursor) -> MouseCursor {
+fn to_winit_cursor(cursor: MouseCursor) -> CursorIcon {
     match cursor {
-        imgui::MouseCursor::Arrow => MouseCursor::Default,
-        imgui::MouseCursor::TextInput => MouseCursor::Text,
-        imgui::MouseCursor::ResizeAll => MouseCursor::Move,
-        imgui::MouseCursor::ResizeNS => MouseCursor::NsResize,
-        imgui::MouseCursor::ResizeEW => MouseCursor::EwResize,
-        imgui::MouseCursor::ResizeNESW => MouseCursor::NeswResize,
-        imgui::MouseCursor::ResizeNWSE => MouseCursor::NwseResize,
-        imgui::MouseCursor::Hand => MouseCursor::Grab,
-        imgui::MouseCursor::NotAllowed => MouseCursor::NotAllowed,
+        MouseCursor::Arrow => CursorIcon::Default,
+        MouseCursor::TextInput => CursorIcon::Text,
+        MouseCursor::ResizeAll => CursorIcon::Move,
+        MouseCursor::ResizeNS => CursorIcon::NsResize,
+        MouseCursor::ResizeEW => CursorIcon::EwResize,
+        MouseCursor::ResizeNESW => CursorIcon::NeswResize,
+        MouseCursor::ResizeNWSE => CursorIcon::NwseResize,
+        MouseCursor::Hand => CursorIcon::Grab,
+        MouseCursor::NotAllowed => CursorIcon::NotAllowed,
     }
 }
 
@@ -170,13 +170,13 @@ impl HiDpiMode {
     }
 }
 
-fn to_imgui_mouse_button(button: MouseButton) -> Option<imgui::MouseButton> {
+fn to_imgui_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
     match button {
-        MouseButton::Left | MouseButton::Other(0) => Some(imgui::MouseButton::Left),
-        MouseButton::Right | MouseButton::Other(1) => Some(imgui::MouseButton::Right),
-        MouseButton::Middle | MouseButton::Other(2) => Some(imgui::MouseButton::Middle),
-        MouseButton::Other(3) => Some(imgui::MouseButton::Extra1),
-        MouseButton::Other(4) => Some(imgui::MouseButton::Extra2),
+        WinitMouseButton::Left | WinitMouseButton::Other(0) => Some(MouseButton::Left),
+        WinitMouseButton::Right | WinitMouseButton::Other(1) => Some(MouseButton::Right),
+        WinitMouseButton::Middle | WinitMouseButton::Other(2) => Some(MouseButton::Middle),
+        WinitMouseButton::Other(3) => Some(MouseButton::Extra1),
+        WinitMouseButton::Other(4) => Some(MouseButton::Extra2),
         _ => None,
     }
 }
@@ -294,10 +294,10 @@ fn to_imgui_key(key: winit::keyboard::Key, location: KeyLocation) -> Option<Key>
 
 fn handle_key_modifier(io: &mut Io, key: &WinitKey, down: bool) {
     match key {
-        WinitKey::Named(NamedKey::Shift) => io.add_key_event(imgui::Key::ModShift, down),
-        WinitKey::Named(NamedKey::Control) => io.add_key_event(imgui::Key::ModCtrl, down),
-        WinitKey::Named(NamedKey::Alt) => io.add_key_event(imgui::Key::ModAlt, down),
-        WinitKey::Named(NamedKey::Super) => io.add_key_event(imgui::Key::ModSuper, down),
+        WinitKey::Named(NamedKey::Shift) => io.add_key_event(Key::ModShift, down),
+        WinitKey::Named(NamedKey::Control) => io.add_key_event(Key::ModCtrl, down),
+        WinitKey::Named(NamedKey::Alt) => io.add_key_event(Key::ModAlt, down),
+        WinitKey::Named(NamedKey::Super) => io.add_key_event(Key::ModSuper, down),
         _ => {}
     }
 }
@@ -310,14 +310,13 @@ impl WinitPlatform {
     /// * backend flags are updated
     /// * keys are configured
     /// * platform name is set
-    pub fn init(imgui: &mut Context) -> WinitPlatform {
-        let io = imgui.io_mut();
+    pub fn init(io: &mut Io) -> WinitPlatform {
         io.backend_flags.insert(BackendFlags::HAS_MOUSE_CURSORS);
         io.backend_flags.insert(BackendFlags::HAS_SET_MOUSE_POS);
-        imgui.set_platform_name(Some(format!(
-            "imgui-winit-support {}",
-            env!("CARGO_PKG_VERSION")
-        )));
+        // imgui.set_platform_name(Some(format!(
+        //     "imgui-winit-support {}",
+        //     env!("CARGO_PKG_VERSION")
+        // )));
         WinitPlatform {
             hidpi_mode: ActiveHiDpiMode::Default,
             hidpi_factor: 1.0,
@@ -557,14 +556,13 @@ impl WinitPlatform {
     /// This function performs the following actions:
     ///
     /// * mouse cursor is changed and/or hidden (if requested by imgui-rs)
-    pub fn prepare_render(&mut self, ui: &Ui, window: &Window) {
-        let io = ui.io();
+    pub fn prepare_render(&mut self, io: &Io, mouse_cursor: Option<MouseCursor>, window: &Window) {
         if !io
             .config_flags
             .contains(ConfigFlags::NO_MOUSE_CURSOR_CHANGE)
         {
             let cursor = CursorSettings {
-                cursor: ui.mouse_cursor(),
+                cursor: mouse_cursor,
                 draw_cursor: io.mouse_draw_cursor,
             };
             if self.cursor_cache != Some(cursor) {
