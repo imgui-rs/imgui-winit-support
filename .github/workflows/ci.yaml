@@ -8,9 +8,7 @@ on:
 jobs:
   rustfmt:
     name: Check rustfmt
-    # this is pretty weird, but `winit` requires a backend on linux
-    # and we don't specify that at all and just let end users do that
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
@@ -19,7 +17,9 @@ jobs:
 
   test:
     name: Run linter
-    runs-on: ubuntu-latest
+    # this is pretty weird, but `winit` requires a backend on linux
+    # and we don't specify that at all and just let end users do that
+    runs-on: windows-latest
     if: github.ref == 'refs/heads/main'
     env:
       RUSTFLAGS: -D warnings
