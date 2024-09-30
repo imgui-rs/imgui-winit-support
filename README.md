@@ -16,7 +16,7 @@ There are five things you need to do to use this library correctly:
 
 ## Complete example (without a renderer)
 
-```no_run
+```rs
 use imgui::Context;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
