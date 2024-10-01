@@ -191,10 +191,10 @@ impl WinitPlatform {
                 // We need to track modifiers separately because some system like macOS, will
                 // not reliably send modifier states during certain events like ScreenCapture.
                 // Gotta let the people show off their pretty imgui widgets!
-                io.add_key_event(Key::ModShift, state.shift_key());
-                io.add_key_event(Key::ModCtrl, state.control_key());
-                io.add_key_event(Key::ModAlt, state.alt_key());
-                io.add_key_event(Key::ModSuper, state.super_key());
+                io.add_key_event(Key::LeftShift, state.shift_key());
+                io.add_key_event(Key::LeftCtrl, state.control_key());
+                io.add_key_event(Key::LeftAlt, state.alt_key());
+                io.add_key_event(Key::LeftSuper, state.super_key());
             }
             WindowEvent::KeyboardInput { ref event, .. } => {
                 if event.state.is_pressed() {
@@ -506,10 +506,10 @@ fn to_imgui_key(key: winit::keyboard::Key, location: KeyLocation) -> Option<Key>
 
 fn handle_key_modifier(io: &mut Io, key: &WinitKey, down: bool) {
     match key {
-        WinitKey::Named(NamedKey::Shift) => io.add_key_event(imgui::Key::ModShift, down),
-        WinitKey::Named(NamedKey::Control) => io.add_key_event(imgui::Key::ModCtrl, down),
-        WinitKey::Named(NamedKey::Alt) => io.add_key_event(imgui::Key::ModAlt, down),
-        WinitKey::Named(NamedKey::Super) => io.add_key_event(imgui::Key::ModSuper, down),
+        WinitKey::Named(NamedKey::Shift) => io.add_key_event(imgui::Key::LeftShift, down),
+        WinitKey::Named(NamedKey::Control) => io.add_key_event(imgui::Key::LeftCtrl, down),
+        WinitKey::Named(NamedKey::Alt) => io.add_key_event(imgui::Key::LeftAlt, down),
+        WinitKey::Named(NamedKey::Super) => io.add_key_event(imgui::Key::LeftSuper, down),
         _ => {}
     }
 }
